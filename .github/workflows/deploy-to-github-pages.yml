@@ -1,0 +1,53 @@
+name: Deploy Docusaurus website to github pages
+
+on:
+  push:
+    branches:
+      - main
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
+env:
+  # Hosted GitHub runners have 7 GB of memory available, let's use 6 GB
+  NODE_OPTIONS: --max-old-space-size=6144
+
+jobs:
+  build:
+      name: Build Docusaurus
+      runs-on: ubuntu-latest
+      steps:
+        - uses: actions/checkout@v4
+          with:
+            fetch-depth: 0
+
+        - name: Install dependencies
+          run: yarn install --frozen-lockfile
+          working-directory: ./docs
+        - name: Build website
+          run: yarn build
+          working-directory: ./docs
+
+        - name: Upload Build Artifact
+          uses: actions/upload-pages-artifact@v3
+          with:
+            path: ./docs/build
+
+  deploy:
+    name: Deploy to Github Pages
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
